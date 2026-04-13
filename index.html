@@ -10,11 +10,9 @@
         .container { max-width: 900px; margin: auto; }
         .header-card { background: var(--card); padding: 25px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 30px; }
         h1 { margin: 0 0 15px 0; color: var(--blue); letter-spacing: 2px; }
-        
         .controls { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
         select, input { padding: 12px; background: var(--bg); color: white; border: 1px solid var(--border); border-radius: 8px; outline: none; }
-        select { cursor: pointer; border-color: var(--blue); width: 150px; }
-
+        select { cursor: pointer; border-color: var(--blue); width: 180px; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
         th { background: #21262d; color: var(--blue); padding: 15px; text-align: left; font-size: 13px; text-transform: uppercase; }
         td { padding: 14px; border-bottom: 1px solid var(--border); text-align: left; font-size: 14px; }
@@ -57,11 +55,11 @@
 </div>
 
 <script>
-    // PASTE YOUR IDs HERE
+    // 1. PUT YOUR IDS HERE
     const rankSheetID = "1WA0nc2tLoInF4yZOfCzZyH81qvdzH_yNN_bdnXd9ukA"; 
     const fineSheetID = "1foNx05a6T7rkovzbxqzUV2F5DoP5IdmU_i9cajci9FE";
 
-    // Helper to find column names regardless of hidden spaces
+    // Helper to find columns with potential spaces
     function getVal(row, possibleNames) {
         for (let name of possibleNames) {
             if (row[name] !== undefined) return row[name];
@@ -70,10 +68,13 @@
         return "";
     }
 
+    // THE LOAD DATA FUNCTION
     async function loadData() {
         const status = document.getElementById('status-msg');
         const selectedTab = document.getElementById('runSelect').value;
-        status.innerText = "Syncing " + selectedTab + "...";
+        const displayName = document.getElementById('runSelect').options[document.getElementById('runSelect').selectedIndex].text;
+        
+        status.innerText = "Syncing " + displayName + "...";
 
         try {
             const [rankRes, fineRes] = await Promise.all([
@@ -84,7 +85,7 @@
             const rankData = await rankRes.json();
             const fineData = await fineRes.json();
 
-            // Rankings
+            // Render Rankings
             document.getElementById('rankBody').innerHTML = rankData.map(row => `
                 <tr>
                     <td>${getVal(row, ["Rank"])}</td>
@@ -94,7 +95,7 @@
                 </tr>
             `).join('');
 
-            // Fines
+            // Render Fines
             document.getElementById('fineBody').innerHTML = fineData.map(row => {
                 const s = (getVal(row, ["Status"]) || "").toLowerCase();
                 const isPaid = s.includes("paid") && !s.includes("not");
@@ -107,9 +108,9 @@
                 </tr>
             `}).join('');
 
-            status.innerText = "✅ " + selectedTab + " Data Loaded";
+            status.innerText = "✅ " + displayName + " Data Loaded";
         } catch (e) {
-            status.innerText = "❌ Error loading " + selectedTab + ". Check your Sheet Tabs!";
+            status.innerText = "❌ Error: Could not find " + selectedTab + " in your Google Sheet.";
         }
     }
 
@@ -120,8 +121,9 @@
         });
     }
 
-    // Auto-load Run 1 on startup
+    // CALL THE FUNCTION TO START THE SITE
     loadData();
 </script>
+
 </body>
 </html>
