@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S C A R A B — 4030 Dashboard</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #e6edf3; --blue: #58a6ff; --red: #f85149; --green: #3fb950; }
+        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; padding: 20px; text-align: center; }
+        .container { max-width: 900px; margin: auto; }
+        .header-card { background: var(--card); padding: 25px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 30px; }
+        h1 { margin: 0 0 15px 0; color: var(--blue); letter-spacing: 2px; }
+        
+        .controls { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+        select, input { padding: 12px; background: var(--bg); color: white; border: 1px solid var(--border); border-radius: 8px; outline: none; }
+        select { cursor: pointer; border-color: var(--blue); width: 150px; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+        th { background: #21262d; color: var(--blue); padding: 15px; text-align: left; font-size: 13px; text-transform: uppercase; }
+        td { padding: 14px; border-bottom: 1px solid var(--border); text-align: left; font-size: 14px; }
+        .fine-cell { color: var(--red); font-weight: bold; }
+        .status-paid { color: var(--green); font-weight: bold; }
+        .status-unpaid { color: var(--red); font-weight: bold; }
+        h2 { text-align: left; margin-top: 40px; color: var(--blue); border-left: 5px solid var(--blue); padding-left: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-card">
+        <h1>S C A R A B — 4030</h1>
+        <div class="controls">
+            <select id="runSelect" onchange="loadData()">
+                <option value="Sheet1">MGE Run 1</option>
+                <option value="Sheet2">MGE Run 2</option>
+            </select>
+            <input type="text" id="search" placeholder="🔍 Search player..." onkeyup="filterData()">
+        </div>
+        <div id="status-msg" style="margin-top:10px; color:#8b949e;">Connecting...</div>
+    </div>
+
+    <h2>🏆 FIXED MGE RANKINGS</h2>
+    <table>
+        <thead>
+            <tr><th>Rank</th><th>Governor ID</th><th>In Game Name</th><th>Limit</th></tr>
+        </thead>
+        <tbody id="rankBody"></tbody>
+    </table>
+
+    <h2>⚠️ MGE OFFENDERS LIST</h2>
+    <table>
+        <thead>
+            <tr><th>In Game Name</th><th>Offense</th><th>Fine</th><th>Status</th></tr>
+        </thead>
+        <tbody id="fineBody"></tbody>
+    </table>
+</div>
+
+<script>
+    // PASTE YOUR IDs HERE
+    const rankSheetID = "1WA0nc2tLoInF4yZOfCzZyH81qvdzH_yNN_bdnXd9ukA"; 
+    const fineSheetID = "1foNx05a6T7rkovzbxqzUV2F5DoP5IdmU_i9cajci9FE";
+
+    // Helper to find column names regardless of hidden spaces
+    function getVal(row, possibleNames) {
+        for (let name of possibleNames) {
+            if (row[name] !== undefined) return row[name];
+            if (row[name + " "] !== undefined) return row[name + " "];
+        }
+        return "";
+    }
+
+    async function loadData() {
+        const status = document.getElementById('status-msg');
+        const selectedTab = document.getElementById('runSelect').value;
+        status.innerText = "Syncing " + selectedTab + "...";
+
+        try {
+            const [rankRes, fineRes] = await Promise.all([
+                fetch(`https://opensheet.elk.sh/${rankSheetID}/${selectedTab}`),
+                fetch(`https://opensheet.elk.sh/${fineSheetID}/${selectedTab}`)
+            ]);
+
+            const rankData = await rankRes.json();
+            const fineData = await fineRes.json();
+
+            // Rankings
+            document.getElementById('rankBody').innerHTML = rankData.map(row => `
+                <tr>
+                    <td>${getVal(row, ["Rank"])}</td>
+                    <td>${getVal(row, ["Governor ID"])}</td>
+                    <td><b>${getVal(row, ["In Game Name"])}</b></td>
+                    <td>${getVal(row, ["Point Limit"])}</td>
+                </tr>
+            `).join('');
+
+            // Fines
+            document.getElementById('fineBody').innerHTML = fineData.map(row => {
+                const s = (getVal(row, ["Status"]) || "").toLowerCase();
+                const isPaid = s.includes("paid") && !s.includes("not");
+                return `
+                <tr>
+                    <td><b>${getVal(row, ["In Game Name"])}</b></td>
+                    <td>${getVal(row, ["Stage Offends"])}</td>
+                    <td class="fine-cell">${getVal(row, ["Resource Fine (M)"])}M</td>
+                    <td class="${isPaid ? 'status-paid' : 'status-unpaid'}">${s.toUpperCase() || 'PENDING'}</td>
+                </tr>
+            `}).join('');
+
+            status.innerText = "✅ " + selectedTab + " Data Loaded";
+        } catch (e) {
+            status.innerText = "❌ Error loading " + selectedTab + ". Check your Sheet Tabs!";
+        }
+    }
+
+    function filterData() {
+        const val = document.getElementById('search').value.toLowerCase();
+        document.querySelectorAll('tbody tr').forEach(tr => {
+            tr.style.display = tr.innerText.toLowerCase().includes(val) ? "" : "none";
+        });
+    }
+
+    // Auto-load Run 1 on startup
+    loadData();
+</script>
+</body>
+</html>
