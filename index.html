@@ -30,7 +30,7 @@
     <div class="header-card">
         <h1>S C A R A B — 4 0 3 0</h1>
         <div class="controls">
-            <select id="runSelect" onchange="loadData()">
+            <select id="runSelect">
                 <option value="Sheet1">MGE CM 1</option>
                 <option value="Sheet2">MGE CM 2</option>
             </select>
@@ -57,7 +57,7 @@
 </div>
 
 <script>
-    // 1. ADD YOUR ACTUAL IDs HERE
+    // 1. ADD YOUR IDS HERE
     const rankSheetID = "1WA0nc2tLoInF4yZOfCzZyH81qvdzH_yNN_bdnXd9ukA"; 
     const fineSheetID = "1foNx05a6T7rkovzbxqzUV2F5DoP5IdmU_i9cajci9FE";
 
@@ -77,11 +77,6 @@
         
         status.innerText = "Syncing " + displayName + "...";
 
-        // --- THE LINK UPDATER ---
-        // This updates the link in the browser bar as you click!
-        const newURL = window.location.protocol + "//" + window.location.host + window.location.pathname + '?run=' + selectedTab;
-        window.history.pushState({path:newURL}, '', newURL);
-
         try {
             const [rankRes, fineRes] = await Promise.all([
                 fetch(`https://opensheet.elk.sh/${rankSheetID}/${selectedTab}`),
@@ -91,6 +86,7 @@
             const rankData = await rankRes.json();
             const fineData = await fineRes.json();
 
+            // Render Rankings
             document.getElementById('rankBody').innerHTML = rankData.map(row => `
                 <tr>
                     <td>${getVal(row, ["Rank"])}</td>
@@ -100,6 +96,7 @@
                 </tr>
             `).join('');
 
+            // Render Fines
             document.getElementById('fineBody').innerHTML = fineData.map(row => {
                 const s = (getVal(row, ["Status"]) || "").toLowerCase();
                 const isPaid = s.includes("paid") && !s.includes("not");
@@ -114,9 +111,18 @@
 
             status.innerText = "✅ " + displayName + " Synced";
         } catch (e) {
-            status.innerText = "❌ Connection Error";
+            status.innerText = "❌ Sync Failed. Check Tab Names.";
         }
     }
+
+    // THIS UPDATES THE LINK IN THE BROWSER BAR WITHOUT RELOADING
+    document.getElementById('runSelect').addEventListener('change', function() {
+        const selectedValue = this.value;
+        const newURL = new URL(window.location.href);
+        newURL.searchParams.set('run', selectedValue);
+        window.history.pushState({}, '', newURL); // Changes the link in the bar
+        loadData(); // Loads the new sheet data
+    });
 
     function filterData() {
         const val = document.getElementById('search').value.toLowerCase();
@@ -125,16 +131,12 @@
         });
     }
 
-    // This handles the link when you FIRST open the page
+    // LOGIC TO READ THE LINK WHEN YOU FIRST OPEN THE SITE
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
         const runParam = urlParams.get('run');
-
         if (runParam) {
-            const dropdown = document.getElementById('runSelect');
-            if ([...dropdown.options].some(opt => opt.value === runParam)) {
-                dropdown.value = runParam;
-            }
+            document.getElementById('runSelect').value = runParam;
         }
         loadData();
     };
