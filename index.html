@@ -8,8 +8,8 @@
         :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #e6edf3; --blue: #58a6ff; --red: #f85149; --green: #3fb950; }
         body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; }
         .container { max-width: 900px; margin: auto; }
-        .header-card { background: var(--card); padding: 25px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        h1 { margin: 0 0 15px 0; color: var(--blue); letter-spacing: 2px; text-transform: uppercase; }
+        .header-card { background: var(--card); padding: 25px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 30px; }
+        h1 { margin: 0 0 15px 0; color: var(--blue); letter-spacing: 2px; }
         .controls { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
         select, input { padding: 12px; background: var(--bg); color: white; border: 1px solid var(--border); border-radius: 8px; outline: none; transition: 0.3s; }
         select:focus, input:focus { border-color: var(--blue); }
@@ -20,7 +20,7 @@
         .fine-cell { color: var(--red); font-weight: bold; }
         .status-paid { color: var(--green); font-weight: bold; }
         .status-unpaid { color: var(--red); font-weight: bold; }
-        h2 { text-align: left; margin-top: 40px; color: var(--blue); border-left: 5px solid var(--blue); padding-left: 15px; font-size: 1.2rem; }
+        h2 { text-align: left; margin-top: 40px; color: var(--blue); border-left: 5px solid var(--blue); padding-left: 15px; }
         #status-msg { margin-top: 15px; font-size: 0.85rem; color: #8b949e; }
     </style>
 </head>
@@ -30,7 +30,7 @@
     <div class="header-card">
         <h1>S C A R A B — 4 0 3 0</h1>
         <div class="controls">
-            <select id="runSelect" onchange="updateRun()">
+            <select id="runSelect" onchange="loadData()">
                 <option value="Sheet1">MGE CM 1</option>
                 <option value="Sheet2">MGE CM 2</option>
             </select>
@@ -57,13 +57,10 @@
 </div>
 
 <script>
-    // ==========================================
-    // 1. ADD YOUR SHEET IDs HERE
-    // ==========================================
+    // 1. ADD YOUR ACTUAL IDs HERE
     const rankSheetID = "1WA0nc2tLoInF4yZOfCzZyH81qvdzH_yNN_bdnXd9ukA"; 
     const fineSheetID = "1foNx05a6T7rkovzbxqzUV2F5DoP5IdmU_i9cajci9FE";
 
-    // Helper function to handle spaces in Google Sheet Headers
     function getVal(row, possibleNames) {
         for (let name of possibleNames) {
             if (row[name] !== undefined) return row[name];
@@ -72,17 +69,18 @@
         return "";
     }
 
-    // This runs when you manually change the dropdown
-    function updateRun() {
-        loadData();
-    }
-
     async function loadData() {
         const status = document.getElementById('status-msg');
-        const selectedTab = document.getElementById('runSelect').value;
-        const displayName = document.getElementById('runSelect').options[document.getElementById('runSelect').selectedIndex].text;
+        const dropdown = document.getElementById('runSelect');
+        const selectedTab = dropdown.value;
+        const displayName = dropdown.options[dropdown.selectedIndex].text;
         
         status.innerText = "Syncing " + displayName + "...";
+
+        // --- THE LINK UPDATER ---
+        // This updates the link in the browser bar as you click!
+        const newURL = window.location.protocol + "//" + window.location.host + window.location.pathname + '?run=' + selectedTab;
+        window.history.pushState({path:newURL}, '', newURL);
 
         try {
             const [rankRes, fineRes] = await Promise.all([
@@ -93,7 +91,6 @@
             const rankData = await rankRes.json();
             const fineData = await fineRes.json();
 
-            // Rankings
             document.getElementById('rankBody').innerHTML = rankData.map(row => `
                 <tr>
                     <td>${getVal(row, ["Rank"])}</td>
@@ -103,7 +100,6 @@
                 </tr>
             `).join('');
 
-            // Fines
             document.getElementById('fineBody').innerHTML = fineData.map(row => {
                 const s = (getVal(row, ["Status"]) || "").toLowerCase();
                 const isPaid = s.includes("paid") && !s.includes("not");
@@ -116,9 +112,9 @@
                 </tr>
             `}).join('');
 
-            status.innerText = "✅ " + displayName + " Data Loaded Successfully";
+            status.innerText = "✅ " + displayName + " Synced";
         } catch (e) {
-            status.innerHTML = "<b style='color:var(--red)'>Error:</b> Could not find " + selectedTab + ". Check your Sheet Tabs!";
+            status.innerText = "❌ Connection Error";
         }
     }
 
@@ -129,16 +125,13 @@
         });
     }
 
-    // ==========================================
-    // 2. SMART LINK LOGIC (Direct Navigation)
-    // ==========================================
+    // This handles the link when you FIRST open the page
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
-        const runParam = urlParams.get('run'); // Looks for ?run=Sheet2 in URL
+        const runParam = urlParams.get('run');
 
         if (runParam) {
             const dropdown = document.getElementById('runSelect');
-            // If the URL says ?run=Sheet2, we set the dropdown to that automatically
             if ([...dropdown.options].some(opt => opt.value === runParam)) {
                 dropdown.value = runParam;
             }
@@ -146,6 +139,5 @@
         loadData();
     };
 </script>
-
 </body>
 </html>
