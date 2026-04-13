@@ -26,6 +26,8 @@
 
 <div class="container">
     <div class="header-card">
+        <select id="runSelect" onchange="loadData()">
+    <option value="Sheet1">MGE CM 1</option> <option value="Sheet2">MGE CM 2</option> </select>
         <h1>S C A R A B — 4030</h1>
         <div class="controls">
             <select id="runSelect" onchange="loadData()">
@@ -120,7 +122,15 @@
             tr.style.display = tr.innerText.toLowerCase().includes(val) ? "" : "none";
         });
     }
+// Add this right before you call loadData() at the very bottom
+const urlParams = new URLSearchParams(window.location.search);
+const runParam = urlParams.get('run');
 
+if (runParam) {
+    document.getElementById('runSelect').value = runParam;
+}
+
+loadData(); // This starts the site
     // CALL THE FUNCTION TO START THE SITE
     loadData();
 </script>
